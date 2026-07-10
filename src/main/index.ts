@@ -26,6 +26,8 @@ import {
   type ChangedFile,
   type DirEntry,
   type FileContent,
+  type GitFileState,
+  type GitStatus,
   type HistoryEntry,
   type SessionState
 } from '../shared/types'
@@ -49,6 +51,21 @@ const FS_IGNORE = new Set([
 ])
 /** Max file size the mini-editor will load into Monaco (bytes). */
 const MAX_READ_BYTES = 1024 * 1024
+
+/**
+ * Picks the working directory to boot Bonsai in, preferring an explicit
+ * choice, then the last-used project, then the process's own cwd — but never
+ * the OS home directory itself, since a stale persisted value pointing there
+ * (or an app shortcut launched with no cwd) would otherwise make Bonsai watch
+ * the entire home folder on every future launch.
+ */
+function resolveCwd(explicit?: string | null): string {
+  const home = os.homedir()
+  for (const candidate of [explicit, store.getCwd(), process.cwd()]) {
+    if (candidate && candidate !== home) return candidate
+  }
+  return process.cwd()
+}
 
 /** Resolve a project-relative path to an absolute one, rejecting escapes above the root. */
 function safeResolve(rel: string): string | null {
@@ -93,7 +110,7 @@ function createWindow(): void {
     minWidth: 940,
     minHeight: 620,
     show: false,
-    backgroundColor: '#0a0b0f',
+    backgroundColor: '#07080a',
     title: 'Bonsai Desktop',
     autoHideMenuBar: true,
     webPreferences: {
@@ -138,7 +155,7 @@ ipcMain.handle(CMD.attach, (): AttachSnapshot => {
 })
 
 ipcMain.handle(CMD.start, async (_e, cwd?: string) => {
-  const dir = cwd || store.getCwd() || process.cwd()
+  const dir = resolveCwd(cwd)
   store.setCwd(dir)
   await session.boot(dir)
 })
@@ -199,6 +216,10 @@ ipcMain.on(CMD.openVSCode, () => {
   })
 })
 
+ipcMain.on(CMD.openFolder, () => {
+  shell.openPath(session.state.cwd)
+})
+
 ipcMain.handle(CMD.chooseFolder, async (): Promise<string | null> => {
   const res = await dialog.showOpenDialog(win!, { properties: ['openDirectory'] })
   return res.canceled ? null : res.filePaths[0] ?? null
@@ -234,7 +255,76 @@ ipcMain.handle(CMD.fileDiff, (_e, path: string): Promise<string> => {
   })
 })
 
+ipcMain.handle(CMD.gitStatus, (): Promise<GitStatus> => {
+  const empty: GitStatus = { branch: '', files: {} }
+  const cwd = session.state.cwd
+  if (!cwd) return Promise.resolve(empty)
+  return new Promise((resolve) => {
+    execFile(
+      'git',
+      ['status', '--porcelain=v1', '-b'],
+      { cwd, shell: true, maxBuffer: 5 * 1024 * 1024 },
+      (err, stdout) => {
+        if (err || !stdout) return resolve(empty)
+        const result: GitStatus = { branch: '', files: {} }
+        for (const line of stdout.split('\n')) {
+          if (!line) continue
+          if (line.startsWith('## ')) {
+            // "## main...origin/main [ahead 1]" -> "main"
+            result.branch = line.slice(3).split('...')[0].trim()
+            continue
+          }
+          const x = line[0] // index (staged) state
+          const y = line[1] // worktree state
+          // Renames are listed as "old -> new"; color the new path.
+          const raw = line.slice(3)
+          const path = (raw.includes(' -> ') ? raw.split(' -> ')[1] : raw).replace(/^"|"$/g, '')
+          let state: GitFileState
+          if (x === '?' || y === '?') state = 'untracked'
+          else if (x === 'D' || y === 'D') state = 'deleted'
+          else if (y !== ' ') state = 'modified'
+          else state = 'staged'
+          result.files[path] = state
+        }
+        resolve(result)
+      }
+    )
+  })
+})
+
 // --- IPC: mini-editor filesystem -------------------------------------------
+
+/** Cap on the fuzzy finder's file list so a huge repo can't hang the walk. */
+const MAX_FINDER_FILES = 8000
+
+function walkFiles(root: string, dir: string, out: string[]): void {
+  if (out.length >= MAX_FINDER_FILES) return
+  let entries: import('node:fs').Dirent[]
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch {
+    return
+  }
+  for (const d of entries) {
+    if (out.length >= MAX_FINDER_FILES) return
+    if (d.name.startsWith('.')) continue
+    const abs = join(dir, d.name)
+    if (d.isDirectory()) {
+      if (FS_IGNORE.has(d.name)) continue
+      walkFiles(root, abs, out)
+    } else {
+      out.push(relative(root, abs).split(sep).join('/'))
+    }
+  }
+}
+
+ipcMain.handle(CMD.listAllFiles, (): string[] => {
+  const root = session.state.cwd
+  if (!root) return []
+  const out: string[] = []
+  walkFiles(root, root, out)
+  return out
+})
 
 ipcMain.handle(CMD.listDir, (_e, rel: string): DirEntry[] => {
   const abs = safeResolve(rel)
@@ -321,7 +411,7 @@ app.whenReady().then(() => {
 
   // Auto-boot Bonsai shortly after the window is up so the UI can subscribe.
   win?.webContents.once('did-finish-load', () => {
-    const dir = store.getCwd() || process.cwd()
+    const dir = resolveCwd()
     store.setCwd(dir)
     void session.boot(dir)
   })

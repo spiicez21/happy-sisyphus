@@ -30,7 +30,8 @@
   "dependencies": {
     "@lydell/node-pty": "^1.1.0",
     "chokidar": "^3.6.0",
-    "electron": "^31.1.0"
+    "electron": "^31.1.0",
+    "lucide-react": "^1.24.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.6.0",

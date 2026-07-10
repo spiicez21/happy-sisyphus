@@ -69,6 +69,17 @@ export interface FileContent {
   tooLarge?: boolean
 }
 
+/** Per-file git state, condensed from `git status --porcelain` XY codes. */
+export type GitFileState = 'modified' | 'staged' | 'untracked' | 'deleted'
+
+/** Result of the gitStatus IPC: current branch plus per-file states. */
+export interface GitStatus {
+  /** Branch name, or '' when not a git repo / detached with no name. */
+  branch: string
+  /** Map of project-relative path -> condensed state. */
+  files: Record<string, GitFileState>
+}
+
 /** Snapshot replayed to a freshly (re)loaded renderer so it can restore scrollback. */
 export interface AttachSnapshot {
   state: SessionState
@@ -99,12 +110,15 @@ export const CMD = {
   clearChat: 'session:clearChat',
   newSession: 'session:newSession',
   openVSCode: 'action:openVSCode',
+  openFolder: 'action:openFolder',
   chooseFolder: 'action:chooseFolder',
   copyConversation: 'action:copyConversation',
   exportMarkdown: 'action:exportMarkdown',
   fileDiff: 'action:fileDiff',
+  gitStatus: 'action:gitStatus',
   // Mini-editor: filesystem access.
   listDir: 'fs:listDir',
+  listAllFiles: 'fs:listAllFiles',
   readFile: 'fs:readFile',
   writeFile: 'fs:writeFile',
   // Mini-editor: embedded shell terminal.
@@ -125,12 +139,16 @@ export interface BonsaiApi {
   clearChat(): Promise<void>
   newSession(): Promise<AttachSnapshot | null>
   openVSCode(): void
+  openFolder(): void
   chooseFolder(): Promise<string | null>
   copyConversation(): Promise<string>
   exportMarkdown(): Promise<string | null>
   fileDiff(path: string): Promise<string>
+  gitStatus(): Promise<GitStatus>
   // Mini-editor: filesystem.
   listDir(path: string): Promise<DirEntry[]>
+  /** Flat list of every file's project-relative path, for the fuzzy finder. */
+  listAllFiles(): Promise<string[]>
   readFile(path: string): Promise<FileContent>
   writeFile(path: string, content: string): Promise<boolean>
   // Mini-editor: embedded shell terminal.
