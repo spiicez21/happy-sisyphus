@@ -7,10 +7,11 @@ group. Check items off as they land.
 
 ## Quality of life
 
-- [ ] **Resizable panels** — drag handles between Sidebar / main island /
-      Changed Files, instead of fixed `w-60` widths. Persist widths to
-      `localStorage`.
-- [ ] **Collapsible panels** — one click to hide Sidebar and/or Changed Files
+- [x] **Resizable panels** — drag handle between main island / Changed Files,
+      instead of a fixed width. Persisted to `localStorage`. (Sidebar itself
+      was later removed in favor of the Footer bar, so only the right panel
+      needs this now.)
+- [ ] **Collapsible panels** — one click to hide Changed Files
       to give the terminal/editor full width. Persist collapsed state.
 - [ ] **Command palette (Ctrl/⌘+K)** — fuzzy-searchable list of every Toolbar
       action (restart, new session, open VS Code, copy, export, clear,
