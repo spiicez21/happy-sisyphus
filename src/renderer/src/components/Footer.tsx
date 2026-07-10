@@ -33,7 +33,17 @@ export default function Footer({ state, filesChanged, history }: Props): JSX.Ele
         {state.projectName && <span className="font-semibold text-fg1">{state.projectName}</span>}
       </span>
 
-      <span className="flex-1 min-w-0 truncate text-[11px] font-mono text-fg3">{state.cwd || '—'}</span>
+      {state.cwd ? (
+        <button
+          onClick={() => window.bonsai.openFolder()}
+          title="Reveal in file manager"
+          className="min-w-0 flex-1 truncate text-left font-mono text-[11px] text-fg3 transition hover:text-accent hover:underline"
+        >
+          {state.cwd}
+        </button>
+      ) : (
+        <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-fg3">—</span>
+      )}
 
       <div className="flex items-center gap-3 shrink-0">
         <span className="flex items-center gap-1.5 text-xs text-fg1">

@@ -99,6 +99,7 @@ export const CMD = {
   clearChat: 'session:clearChat',
   newSession: 'session:newSession',
   openVSCode: 'action:openVSCode',
+  openFolder: 'action:openFolder',
   chooseFolder: 'action:chooseFolder',
   copyConversation: 'action:copyConversation',
   exportMarkdown: 'action:exportMarkdown',
@@ -125,6 +126,7 @@ export interface BonsaiApi {
   clearChat(): Promise<void>
   newSession(): Promise<AttachSnapshot | null>
   openVSCode(): void
+  openFolder(): void
   chooseFolder(): Promise<string | null>
   copyConversation(): Promise<string>
   exportMarkdown(): Promise<string | null>

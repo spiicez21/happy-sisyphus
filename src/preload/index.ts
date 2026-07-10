@@ -32,6 +32,7 @@ const api: BonsaiApi = {
   clearChat: () => ipcRenderer.invoke(CMD.clearChat) as Promise<void>,
   newSession: () => ipcRenderer.invoke(CMD.newSession) as Promise<AttachSnapshot | null>,
   openVSCode: () => ipcRenderer.send(CMD.openVSCode),
+  openFolder: () => ipcRenderer.send(CMD.openFolder),
   chooseFolder: () => ipcRenderer.invoke(CMD.chooseFolder) as Promise<string | null>,
   copyConversation: () => ipcRenderer.invoke(CMD.copyConversation) as Promise<string>,
   exportMarkdown: () => ipcRenderer.invoke(CMD.exportMarkdown) as Promise<string | null>,

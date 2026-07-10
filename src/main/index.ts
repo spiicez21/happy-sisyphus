@@ -50,6 +50,21 @@ const FS_IGNORE = new Set([
 /** Max file size the mini-editor will load into Monaco (bytes). */
 const MAX_READ_BYTES = 1024 * 1024
 
+/**
+ * Picks the working directory to boot Bonsai in, preferring an explicit
+ * choice, then the last-used project, then the process's own cwd — but never
+ * the OS home directory itself, since a stale persisted value pointing there
+ * (or an app shortcut launched with no cwd) would otherwise make Bonsai watch
+ * the entire home folder on every future launch.
+ */
+function resolveCwd(explicit?: string | null): string {
+  const home = os.homedir()
+  for (const candidate of [explicit, store.getCwd(), process.cwd()]) {
+    if (candidate && candidate !== home) return candidate
+  }
+  return process.cwd()
+}
+
 /** Resolve a project-relative path to an absolute one, rejecting escapes above the root. */
 function safeResolve(rel: string): string | null {
   const root = session.state.cwd
@@ -138,7 +153,7 @@ ipcMain.handle(CMD.attach, (): AttachSnapshot => {
 })
 
 ipcMain.handle(CMD.start, async (_e, cwd?: string) => {
-  const dir = cwd || store.getCwd() || process.cwd()
+  const dir = resolveCwd(cwd)
   store.setCwd(dir)
   await session.boot(dir)
 })
@@ -197,6 +212,10 @@ ipcMain.on(CMD.openVSCode, () => {
   execFile('code', [dir], { shell: true }, (err) => {
     if (err) shell.openPath(dir)
   })
+})
+
+ipcMain.on(CMD.openFolder, () => {
+  shell.openPath(session.state.cwd)
 })
 
 ipcMain.handle(CMD.chooseFolder, async (): Promise<string | null> => {
@@ -321,7 +340,7 @@ app.whenReady().then(() => {
 
   // Auto-boot Bonsai shortly after the window is up so the UI can subscribe.
   win?.webContents.once('did-finish-load', () => {
-    const dir = store.getCwd() || process.cwd()
+    const dir = resolveCwd()
     store.setCwd(dir)
     void session.boot(dir)
   })
