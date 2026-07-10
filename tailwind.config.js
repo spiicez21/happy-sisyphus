@@ -4,20 +4,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: {
-          900: '#0a0b0f',
-          850: '#0e1015',
-          800: '#12141c',
-          750: '#171a24',
-          700: '#1d2130',
-          600: '#272c3d',
-          500: '#343b52'
-        },
+        page: 'var(--c-page-bg)',
+        bg: 'var(--c-bg)',
+        surface1: 'var(--c-surface1)',
+        surface2: 'var(--c-surface2)',
+        surface3: 'var(--c-surface3)',
+        surface4: 'var(--c-surface4)',
+        line: 'var(--c-line)',
+        'line-strong': 'var(--c-line-strong)',
+        'line-faint': 'var(--c-line-faint)',
+        fg1: 'var(--c-fg1)',
+        fg2: 'var(--c-fg2)',
+        fg3: 'var(--c-fg3)',
         accent: {
-          DEFAULT: '#4ade80',
-          soft: '#22c55e',
-          dim: '#166534'
-        }
+          DEFAULT: 'var(--c-accent)',
+          soft: 'var(--c-accent-soft)',
+          bg: 'var(--c-accent-bg)'
+        },
+        success: 'var(--c-success)',
+        warning: 'var(--c-warning)',
+        danger: 'var(--c-danger)'
       },
       fontFamily: {
         mono: ['"JetBrains Mono"', '"Cascadia Code"', 'Consolas', 'monospace'],
